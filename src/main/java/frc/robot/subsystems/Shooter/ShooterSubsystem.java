@@ -17,28 +17,22 @@ import yams.motorcontrollers.local.SparkWrapper;
 
 public class ShooterSubsystem extends SubsystemBase {
 
-    // ---------------- CONSTANTS ----------------
     private static final double MAX_RPM = 6000.0;
     private static final double WHEEL_RADIUS_METERS =
         Inches.of(2).in(Meters);
 
-    // FIXED HOOD ANGLE (keep visualizer behavior)
-    private static final Angle HOOD_ANGLE = Degrees.of(35);
-
-    // HEIGHTS
-    private static final double SHOOTER_HEIGHT = 0.50; // meters
-    private static final double TARGET_HEIGHT  = 2.64; // meters (hub)
-
+    private static final double SHOOTER_HEIGHT = 0.50;
+    private static final double TARGET_HEIGHT  = 2.64;
     private static final double GRAVITY = 9.81;
 
     private final FlyWheel flywheel;
+    private final HoodSubsystem hood;
 
-    public ShooterSubsystem() {
+    public ShooterSubsystem(HoodSubsystem hood) {
+        this.hood = hood;
 
-        SparkMax motor = new SparkMax(26, MotorType.kBrushless);
-
-        MechanismGearing gearing =
-            new MechanismGearing(GearBox.fromReductionStages(1, 1));
+        SparkMax motor =
+            new SparkMax(26, MotorType.kBrushless);
 
         SmartMotorControllerConfig motorConfig =
             new SmartMotorControllerConfig(this)
@@ -53,12 +47,11 @@ public class ShooterSubsystem extends SubsystemBase {
                 .withIdleMode(
                     SmartMotorControllerConfig.MotorMode.COAST
                 )
+                .withStatorCurrentLimit(Amps.of(40))
                 .withTelemetry(
                     "ShooterMotor",
                     SmartMotorControllerConfig.TelemetryVerbosity.LOW
-                )
-                .withStatorCurrentLimit(Amps.of(40))
-                .withGearing(gearing);
+                );
 
         SparkWrapper smc =
             new SparkWrapper(
@@ -67,75 +60,60 @@ public class ShooterSubsystem extends SubsystemBase {
                 motorConfig
             );
 
-        FlyWheelConfig flywheelConfig =
-            new FlyWheelConfig(smc)
-                .withDiameter(Inches.of(4))
-                .withMass(Pounds.of(1))
-                .withUpperSoftLimit(RPM.of(MAX_RPM))
-                .withTelemetry(
-                    "Flywheel",
-                    SmartMotorControllerConfig.TelemetryVerbosity.HIGH
-                );
-
-        flywheel = new FlyWheel(flywheelConfig);
+        flywheel =
+            new FlyWheel(
+                new FlyWheelConfig(smc)
+                    .withDiameter(Inches.of(4))
+                    .withUpperSoftLimit(RPM.of(MAX_RPM))
+            );
     }
-
-    // -------------------------------------------------
-    // BALLISTIC SOLVER (FIXED ANGLE, SOLVE VELOCITY)
-    // -------------------------------------------------
 
     public LinearVelocity getRequiredVelocityForDistance(
         double distanceMeters
     ) {
-        double theta = HOOD_ANGLE.in(Radians);
+        Angle hoodAngle =
+            hood.getAngleForDistance(distanceMeters);
+
+        double theta = hoodAngle.in(Radians);
         double h = TARGET_HEIGHT - SHOOTER_HEIGHT;
         double d = distanceMeters;
 
-        double cos = Math.cos(theta);
-        double tan = Math.tan(theta);
+        double denom =
+            2 * Math.pow(Math.cos(theta), 2)
+            * (h - d * Math.tan(theta));
 
-        double denom = 2 * cos * cos * (h - d * tan);
-
-        // Safety clamp
         if (denom >= 0) {
             return MetersPerSecond.of(0);
         }
 
-        double v =
+        return MetersPerSecond.of(
             Math.sqrt(
                 (GRAVITY * d * d) / (-denom)
-            );
-
-        return MetersPerSecond.of(v);
+            )
+        );
     }
 
-    public AngularVelocity velocityToRPM(
-        LinearVelocity velocity
-    ) {
-        double omega =
-            velocity.in(MetersPerSecond) / WHEEL_RADIUS_METERS;
-
-        return RadiansPerSecond.of(omega)
-            .times(60.0 / (2 * Math.PI));
-    }
-
-    // -------------------------------------------------
-    // DIRECT CONTROL (NO COMMAND SPAM)
-    // -------------------------------------------------
-
-    public void setAutoVelocityForDistance(double distanceMeters) {
-
+    public void setVelocityForDistance(double distanceMeters) {
         LinearVelocity v =
             getRequiredVelocityForDistance(distanceMeters);
 
-        AngularVelocity rpm =
-            velocityToRPM(v);
+        double rpm =
+            (v.in(MetersPerSecond) / WHEEL_RADIUS_METERS)
+            * 60.0 / (2 * Math.PI);
 
         flywheel.setSpeed(
-            RPM.of(
-                Math.min(rpm.in(RPM), MAX_RPM)
-            )
+            RPM.of(Math.min(rpm, MAX_RPM))
         );
+    }
+
+    public void stop() {
+        flywheel.setSpeed(RPM.of(0));
+    }
+
+    // ---------------- BACKWARD COMPATIBILITY ----------------
+    
+    public void setAutoVelocityForDistance(double distanceMeters) {
+        setVelocityForDistance(distanceMeters);
     }
 
     public LinearVelocity getLinearVelocity() {
@@ -146,7 +124,7 @@ public class ShooterSubsystem extends SubsystemBase {
     }
 
     public Angle getHoodAngle() {
-        return HOOD_ANGLE;
+        return hood.getAngle();
     }
 
     @Override

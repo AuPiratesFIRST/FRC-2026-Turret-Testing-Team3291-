@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import frc.robot.subsystems.Shooter.HoodSubsystem;
 import frc.robot.subsystems.Shooter.ShooterSubsystem;
 import frc.robot.subsystems.Swerve.SwerveSubsystem;
 import frc.robot.subsystems.Turret.TurretSubsystem;
@@ -35,7 +36,8 @@ private final SwerveSubsystem drivebase =
         vision
     );
 
-  private final ShooterSubsystem shooter = new ShooterSubsystem();
+  private final HoodSubsystem hood = new HoodSubsystem();
+  private final ShooterSubsystem shooter = new ShooterSubsystem(hood);
   
   // Vision subsystem for AprilTag detection
 
