@@ -9,6 +9,7 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.units.measure.Time;
@@ -75,18 +76,33 @@ public class Constants {
 
         
 
-    public static class VisionConstants {
-        // --- CAMERA SETTINGS ---
-        public static final String FRONT_CAMERA_NAME = "frontCamera";
-        public static final Transform3d ROBOT_TO_CAMERA = new Transform3d(
-            new Translation3d(0.3, 0, 0.2), 
+  public static class VisionConstants {
+
+    // ---------- FRONT (POSE) CAMERA ----------
+    public static final String FRONT_CAMERA_NAME = "frontCamera";
+    public static final Transform3d ROBOT_TO_FRONT_CAMERA =
+        new Transform3d(
+            new Translation3d(0.3, 0.0, 0.2),
             new Rotation3d(0, 0, 0)
         );
-        public static final Matrix<N3, N1> SINGLE_TAG_STD_DEVS = VecBuilder.fill(4, 4, 8);
-        public static final Matrix<N3, N1> MULTI_TAG_STD_DEVS = VecBuilder.fill(0.5, 0.5, 1);
 
-        // Target Tag IDs for filtering
-        public static final int[] RED_HUB_TAGS = {2, 3, 4, 5, 8, 9, 10, 11};
-        public static final int[] BLUE_HUB_TAGS = {18, 19, 20, 21, 24, 25, 26, 27};
-    }
+    // ---------- SHOOTER (DISTANCE) CAMERA ----------
+    public static final String SHOOTER_CAMERA_NAME = "shooterCamera";
+    public static final Transform3d ROBOT_TO_SHOOTER_CAMERA =
+        new Transform3d(
+            new Translation3d(0.15, 0.0, 0.55), // above shooter
+            new Rotation3d(0, Units.degreesToRadians(-20), 0) // pitched down
+        );
+
+    // ---------- VISION UNCERTAINTY ----------
+    public static final Matrix<N3, N1> SINGLE_TAG_STD_DEVS =
+        VecBuilder.fill(4, 4, 8);
+    public static final Matrix<N3, N1> MULTI_TAG_STD_DEVS =
+        VecBuilder.fill(0.5, 0.5, 1);
+
+    // ---------- HUB TAGS ----------
+    public static final int[] RED_HUB_TAGS  = {2,3,4,5,8,9,10,11};
+    public static final int[] BLUE_HUB_TAGS = {18,19,20,21,24,25,26,27};
+}
+
 }

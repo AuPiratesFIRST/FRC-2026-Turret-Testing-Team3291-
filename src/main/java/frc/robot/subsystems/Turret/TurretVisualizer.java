@@ -25,6 +25,7 @@ public class TurretVisualizer {
 
     private final StructArrayPublisher<Pose3d> trajectoryPub;
     private final StructPublisher<Pose3d> turretPosePub;
+    private final BooleanPublisher hitPub;
 
     public TurretVisualizer(
         Supplier<Pose3d> robotPoseSupplier,
@@ -38,12 +39,21 @@ public class TurretVisualizer {
         NetworkTableInstance nt = NetworkTableInstance.getDefault();
 
         trajectoryPub =
-            nt.getStructArrayTopic("Turret/Trajectory", Pose3d.struct)
-              .publish();
+            nt.getStructArrayTopic(
+                "Turret/Trajectory",
+                Pose3d.struct
+            ).publish();
 
         turretPosePub =
-            nt.getStructTopic("Turret/3DPose", Pose3d.struct)
-              .publish();
+            nt.getStructTopic(
+                "Turret/3DPose",
+                Pose3d.struct
+            ).publish();
+
+        hitPub =
+            nt.getBooleanTopic(
+                "Turret/WillHit"
+            ).publish();
     }
 
     public void update(
@@ -88,10 +98,22 @@ public class TurretVisualizer {
             + speeds.vyMetersPerSecond;
 
         Pose3d[] trajectory = new Pose3d[50];
+        boolean willHit = false;
+
+        double funnelRadius =
+            FieldConstants.FUNNEL_RADIUS.in(Meters);
+
+        double funnelBottomZ =
+            Inches.of(56.4).in(Meters);
+
+        double funnelTopZ =
+            Inches.of(72.0).in(Meters);
 
         for (int i = 0; i < trajectory.length; i++) {
             double t = i * 0.04;
 
+            double x = turretXY.getX() + vx * t;
+            double y = turretXY.getY() + vy * t;
             double z =
                 SHOOTER_HEIGHT
                 + vz * t
@@ -99,14 +121,27 @@ public class TurretVisualizer {
 
             trajectory[i] =
                 new Pose3d(
-                    turretXY.getX() + vx * t,
-                    turretXY.getY() + vy * t,
+                    x,
+                    y,
                     Math.max(0.0, z),
                     new Rotation3d()
                 );
+
+            // ---------------- HIT DETECTION ----------------
+            if (!willHit
+                && z >= funnelBottomZ
+                && z <= funnelTopZ
+                && new Translation2d(x, y)
+                    .getDistance(
+                        hub.toTranslation2d()
+                    ) <= funnelRadius
+            ) {
+                willHit = true;
+            }
         }
 
         trajectoryPub.set(trajectory);
+        hitPub.set(willHit);
 
         turretPosePub.set(
             new Pose3d(

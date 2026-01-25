@@ -1,109 +1,156 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
-
 package frc.robot;
 
 import java.io.File;
+
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.Filesystem;
-import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+
 import frc.robot.subsystems.Shooter.HoodSubsystem;
 import frc.robot.subsystems.Shooter.ShooterSubsystem;
 import frc.robot.subsystems.Swerve.SwerveSubsystem;
 import frc.robot.subsystems.Turret.TurretSubsystem;
-import swervelib.simulation.ironmaple.simulation.SimulatedArena;
-import swervelib.simulation.ironmaple.simulation.seasonspecific.rebuilt2026.RebuiltFuelOnFly;
-
-// Utilities
-import static edu.wpi.first.units.Units.*;
-
-
 import frc.robot.subsystems.vision.VisionSubsystem;
+
+import static edu.wpi.first.units.Units.*;
 
 public class RobotContainer {
 
-  // --- SUBSYSTEMS ---
- private final VisionSubsystem vision = new VisionSubsystem();
-private final SwerveSubsystem drivebase =
-    new SwerveSubsystem(
-        new File(Filesystem.getDeployDirectory(), "swerve"),
-        vision
-    );
+  // ---------------- SUBSYSTEMS ----------------
+  private final VisionSubsystem vision = new VisionSubsystem();
+
+  private final SwerveSubsystem drivebase =
+      new SwerveSubsystem(
+          new File(Filesystem.getDeployDirectory(), "swerve"),
+          vision
+      );
 
   private final HoodSubsystem hood = new HoodSubsystem();
   private final ShooterSubsystem shooter = new ShooterSubsystem(hood);
-  
-  // Vision subsystem for AprilTag detection
-
   private final TurretSubsystem turret =
-    new TurretSubsystem(vision, drivebase, shooter);
+      new TurretSubsystem(vision, drivebase);
 
-  
+  // ---------------- CONTROLLERS ----------------
+  private final CommandXboxController driver =
+      new CommandXboxController(0);
 
-             
-  // --- CONTROLLER ---
-  private final CommandXboxController driverController = new CommandXboxController(0);
-  private final CommandXboxController turretController =
-    new CommandXboxController(1);
-
+  private final CommandXboxController operator =
+      new CommandXboxController(1);
 
   public RobotContainer() {
     configureBindings();
-
   }
-
 
   private void configureBindings() {
 
-  
-
-    // ---------------- DRIVE ----------------
+    // ================= DRIVE =================
     drivebase.setDefaultCommand(
         drivebase.driveCommand(
-            () -> -MathUtil.applyDeadband(driverController.getLeftY(), 0.1),
-            () -> -MathUtil.applyDeadband(driverController.getLeftX(), 0.1),
-            () -> -driverController.getRightX()
+            () -> -MathUtil.applyDeadband(driver.getLeftY(), 0.1),
+            () -> -MathUtil.applyDeadband(driver.getLeftX(), 0.1),
+            () -> {
+    double stick =
+        -MathUtil.applyDeadband(driver.getRightX(), 0.1);
+
+    // If driver is touching the stick, override auto aim
+    if (Math.abs(stick) > 0.05) {
+        turret.disableHubTracking();
+        turret.manualRotate(stick);
+        return stick;
+    }
+
+    // Otherwise, let turret decide rotation
+    return turret.getDesiredRobotOmega();
+}
+
         )
     );
 
-    // ---------------- RESET GYRO ----------------
-    driverController.a().onTrue(
+    // Reset gyro
+    driver.a().onTrue(
         Commands.runOnce(drivebase::zeroGyro)
     );
 
-     // ---------------- AUTO SHOOT ----------------
-    driverController.rightTrigger()
-        .whileTrue(
-            Commands.run(
-                () -> turret.enableAutoShoot(true),
-                turret
+
+    // ================= TURRET AUTO AIM =================
+    driver.y().onTrue(
+        Commands.runOnce(turret::enableHubTracking)
+    );
+
+    driver.b().onTrue(
+        Commands.runOnce(turret::disableHubTracking)
+    );
+
+    // ================= MANUAL TURRET (D-PAD) =================
+    operator.povLeft().whileTrue(
+        Commands.run(
+            () -> turret.manualRotate(-0.4),
+            turret
+        )
+    );
+
+    operator.povRight().whileTrue(
+        Commands.run(
+            () -> turret.manualRotate(0.4),
+            turret
+        )
+    );
+
+    operator.povLeft().onFalse(
+        Commands.runOnce(() -> turret.manualRotate(0.0))
+    );
+    operator.povRight().onFalse(
+        Commands.runOnce(() -> turret.manualRotate(0.0))
+    );
+
+    // ================= HOOD (D-PAD) =================
+    operator.povUp().onTrue(
+        Commands.runOnce(
+            () -> hood.setTargetAngle(
+                hood.getAngle().plus(Degrees.of(2))
             )
         )
-        .onFalse(
-            Commands.runOnce(
-                () -> turret.enableAutoShoot(false),
-                turret
-            )
-        );
-    
-}
+    );
 
-    public Command getAutonomousCommand() {
+    operator.povDown().onTrue(
+        Commands.runOnce(
+            () -> hood.setTargetAngle(
+                hood.getAngle().minus(Degrees.of(2))
+            )
+        )
+    );
+
+    // ================= SHOOTER =================
+    operator.rightTrigger().whileTrue(
+        Commands.run(shooter::spinUp, shooter)
+    );
+
+    operator.rightTrigger().onFalse(
+        Commands.runOnce(shooter::stop)
+    );
+
+    operator.rightBumper().whileTrue(
+        Commands.run(shooter::feed, shooter)
+    );
+
+    operator.leftBumper().onTrue(
+        Commands.runOnce(shooter::stop)
+    );
+  }
+
+  // ================= AUTO =================
+  public Command getAutonomousCommand() {
     return Commands.print("No autonomous command configured");
   }
 
+  // Accessors (optional)
   public SwerveSubsystem getDrivebase() {
-  return drivebase;
-}
+    return drivebase;
+  }
 
-public VisionSubsystem getVision() {
-  return vision;
-}
-
+  public VisionSubsystem getVision() {
+    return vision;
+  }
 }
