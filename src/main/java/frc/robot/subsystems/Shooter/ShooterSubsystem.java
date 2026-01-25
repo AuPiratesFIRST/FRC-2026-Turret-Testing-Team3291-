@@ -152,6 +152,14 @@ public class ShooterSubsystem extends SubsystemBase {
         flywheel.setSpeed(RPM.of(lastTargetRPM));
     }
 
+    public LinearVelocity getExitVelocity() {
+    double mps =
+        flywheel.getSpeed().in(RadiansPerSecond)
+        * WHEEL_RADIUS;
+
+    return MetersPerSecond.of(mps);
+}
+
     // ------------------------------------------------
     // TRAJECTORY (ADVANTAGESCOPE)
     // ------------------------------------------------

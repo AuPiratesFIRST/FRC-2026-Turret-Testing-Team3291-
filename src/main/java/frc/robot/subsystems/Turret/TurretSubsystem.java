@@ -9,6 +9,9 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.subsystems.Swerve.SwerveSubsystem;
 import frc.robot.subsystems.vision.VisionSubsystem;
+import frc.robot.subsystems.Shooter.ShooterSubsystem;
+import frc.robot.subsystems.Shooter.HoodSubsystem;
+import frc.robot.subsystems.Turret.TurretVisualizer;
 
 public class TurretSubsystem extends SubsystemBase {
 
@@ -16,7 +19,6 @@ public class TurretSubsystem extends SubsystemBase {
     // CONSTANTS
     // ------------------------------------------------
 
-    // Offset of shooter relative to robot center (meters)
     private static final Translation2d SHOOTER_OFFSET =
         new Translation2d(0.35, 0.0);
 
@@ -26,6 +28,11 @@ public class TurretSubsystem extends SubsystemBase {
 
     private final VisionSubsystem vision;
     private final SwerveSubsystem swerve;
+    private final ShooterSubsystem shooter;
+    private final HoodSubsystem hood;
+
+    // ✅ ADDED
+    private final TurretVisualizer visualizer;
 
     // ------------------------------------------------
     // STATE
@@ -50,12 +57,35 @@ public class TurretSubsystem extends SubsystemBase {
 
     public TurretSubsystem(
         VisionSubsystem vision,
-        SwerveSubsystem swerve
+        SwerveSubsystem swerve,
+        ShooterSubsystem shooter,
+        HoodSubsystem hood
     ) {
         this.vision = vision;
         this.swerve = swerve;
+        this.shooter = shooter;
+        this.hood = hood;
 
         headingPID.enableContinuousInput(-Math.PI, Math.PI);
+
+        // ✅ ADDED
+       visualizer =
+            new TurretVisualizer(
+                () -> new Pose3d(
+                    swerve.getPose().getTranslation().getX(),
+                    swerve.getPose().getTranslation().getY(),
+                    0.0,
+                    new Rotation3d(
+                        0,
+                        0,
+                        swerve.getPose().getRotation().getRadians()
+                    )
+                ),
+                swerve::getFieldVelocity,
+                () -> DriverStation.getAlliance()
+                    .orElse(DriverStation.Alliance.Blue)
+                    == DriverStation.Alliance.Blue
+            );
     }
 
     // ------------------------------------------------
@@ -66,6 +96,12 @@ public class TurretSubsystem extends SubsystemBase {
     public void periodic() {
         updateTargeting();
         logToAdvantageScope();
+
+        // ✅ FIX: correct shooter velocity getter
+        visualizer.update(
+            shooter.getExitVelocity(),
+            hood.getAngle()
+        );
     }
 
     // ------------------------------------------------
@@ -100,31 +136,26 @@ public class TurretSubsystem extends SubsystemBase {
     }
 
     // ------------------------------------------------
-    // CONTROL API (USED BY ROBOTCONTAINER)
+    // CONTROL API
     // ------------------------------------------------
 
-    /** Enable automatic hub tracking */
     public void enableHubTracking() {
         hubTrackingEnabled = true;
     }
 
-    /** Disable tracking, allow manual control */
     public void disableHubTracking() {
         hubTrackingEnabled = false;
         manualOmega = 0.0;
     }
 
-    /** Manual rotation input (rad/s equivalent) */
     public void manualRotate(double omega) {
-    manualOmega = omega;
+        manualOmega = omega;
 
-    if (Math.abs(omega) > 0.05) {
-        hubTrackingEnabled = false;
+        if (Math.abs(omega) > 0.05) {
+            hubTrackingEnabled = false;
+        }
     }
-}
 
-
-    /** Output omega for swerve rotation */
     public double getDesiredRobotOmega() {
         if (hubTrackingEnabled) {
             return headingPID.calculate(

@@ -30,7 +30,13 @@ public class RobotContainer {
   private final HoodSubsystem hood = new HoodSubsystem();
   private final ShooterSubsystem shooter = new ShooterSubsystem(hood);
   private final TurretSubsystem turret =
-      new TurretSubsystem(vision, drivebase);
+    new TurretSubsystem(
+        vision,
+        drivebase,
+        shooter,
+        hood
+    );
+
 
   // ---------------- CONTROLLERS ----------------
   private final CommandXboxController driver =

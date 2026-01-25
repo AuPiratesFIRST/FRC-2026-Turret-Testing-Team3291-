@@ -23,9 +23,10 @@ public class TurretVisualizer {
     private final Supplier<ChassisSpeeds> fieldSpeedsSupplier;
     private final Supplier<Boolean> isBlueAlliance;
 
+    // ---------------- NT PUBLISHERS ----------------
     private final StructArrayPublisher<Pose3d> trajectoryPub;
     private final StructPublisher<Pose3d> turretPosePub;
-    private final BooleanPublisher hitPub;
+    private final BooleanPublisher willHitPub;
 
     public TurretVisualizer(
         Supplier<Pose3d> robotPoseSupplier,
@@ -50,7 +51,7 @@ public class TurretVisualizer {
                 Pose3d.struct
             ).publish();
 
-        hitPub =
+        willHitPub =
             nt.getBooleanTopic(
                 "Turret/WillHit"
             ).publish();
@@ -127,21 +128,20 @@ public class TurretVisualizer {
                     new Rotation3d()
                 );
 
-            // ---------------- HIT DETECTION ----------------
             if (!willHit
                 && z >= funnelBottomZ
                 && z <= funnelTopZ
                 && new Translation2d(x, y)
-                    .getDistance(
-                        hub.toTranslation2d()
-                    ) <= funnelRadius
+                    .getDistance(hub.toTranslation2d())
+                    <= funnelRadius
             ) {
                 willHit = true;
             }
         }
 
+        // ---------------- PUBLISH ----------------
         trajectoryPub.set(trajectory);
-        hitPub.set(willHit);
+        willHitPub.set(willHit);
 
         turretPosePub.set(
             new Pose3d(
