@@ -50,7 +50,7 @@ public class ShooterSubsystem extends SubsystemBase {
                 .withIdleMode(SmartMotorControllerConfig.MotorMode.COAST)
                 .withStatorCurrentLimit(Amps.of(40))
                 .withTelemetry("ShooterMotor",
-                    SmartMotorControllerConfig.TelemetryVerbosity.HIGH)
+                    SmartMotorControllerConfig.TelemetryVerbosity.MID)
         );
 
     private final FlyWheel flywheel =
@@ -60,7 +60,7 @@ public class ShooterSubsystem extends SubsystemBase {
                 .withMass(Pounds.of(1))
                 .withUpperSoftLimit(RPM.of(MAX_RPM))
                 .withTelemetry("ShooterMech",
-                    SmartMotorControllerConfig.TelemetryVerbosity.HIGH)
+                    SmartMotorControllerConfig.TelemetryVerbosity.LOW)
         );
 
     private double lastTargetRPM = 0.0;

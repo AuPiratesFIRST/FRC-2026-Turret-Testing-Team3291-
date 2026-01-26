@@ -49,7 +49,7 @@ public class HoodSubsystem extends SubsystemBase {
                   .withSupplyCurrentLimit(Amps.of(20))
                 .withIdleMode(SmartMotorControllerConfig.MotorMode.BRAKE)
                 .withTelemetry("HoodMotor",
-                    SmartMotorControllerConfig.TelemetryVerbosity.HIGH)
+                    SmartMotorControllerConfig.TelemetryVerbosity.LOW)
         );
 
     private final Arm hood =
@@ -61,7 +61,7 @@ public class HoodSubsystem extends SubsystemBase {
                 .withLength(Meters.of(0.30))
                 .withMass(Kilograms.of(2.0))
                 .withTelemetry("Hood",
-                    SmartMotorControllerConfig.TelemetryVerbosity.HIGH)
+                    SmartMotorControllerConfig.TelemetryVerbosity.LOW)
         );
 
     private Angle lastTarget = Degrees.of(20);

@@ -13,6 +13,9 @@ import java.util.function.DoubleSupplier;
 
 import swervelib.SwerveDrive;
 import swervelib.parser.SwerveParser;
+import swervelib.telemetry.SwerveDriveTelemetry;
+import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
+
 
 // PathPlanner imports
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -33,6 +36,9 @@ public class SwerveSubsystem extends SubsystemBase {
 
     Pose2d startingPose =
         new Pose2d(new Translation2d(4, 4), new Rotation2d());
+
+        
+    SwerveDriveTelemetry.verbosity = TelemetryVerbosity.LOW;
 
     try {
       swerveDrive =
