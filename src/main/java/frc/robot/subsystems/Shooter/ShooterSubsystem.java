@@ -22,7 +22,7 @@ import yams.motorcontrollers.local.SparkWrapper;
 
 public class ShooterSubsystem extends SubsystemBase {
 
-    private static final double MAX_RPM = 6000.0;
+    private static final double MAX_RPM = 550.0;
 
     private final SparkMax shooterMotor = new SparkMax(28, MotorType.kBrushless);
 

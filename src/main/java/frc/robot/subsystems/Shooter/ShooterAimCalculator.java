@@ -22,7 +22,7 @@ import org.photonvision.targeting.PhotonTrackedTarget;
  * - Control motors
  * - Schedule commands
  * - Use vision subsystems directly
- *  
+ * 
  * SAFE TO USE FROM:
  * - Commands
  * - Autos
@@ -47,10 +47,10 @@ public final class ShooterAimCalculator {
     private static final double GRAVITY = 9.81;
 
     /** Absolute RPM safety clamp */
-    public static final double MAX_RPM = 6000.0;
+    public static final double MAX_RPM = 550.0;
 
     /** Valid shooting distance bounds */
-    private static final double MIN_DISTANCE = 1.5;
+    private static final double MIN_DISTANCE = 0.1;
     private static final double MAX_DISTANCE = 3.5;
 
     // ============================================================
@@ -63,18 +63,18 @@ public final class ShooterAimCalculator {
 
     static {
         // Distance (m) -> Flywheel RPM
-        rpmMap.put(1.5, 2500.0);
-        rpmMap.put(2.0, 3000.0);
-        rpmMap.put(2.5, 3500.0);
-        rpmMap.put(3.0, 4200.0);
-        rpmMap.put(3.5, 4800.0);
+        rpmMap.put(0.1, 100.0);
+        rpmMap.put(0.2, 200.0);
+        rpmMap.put(0.25, 300.0);
+        rpmMap.put(0.27, 400.0);
+        rpmMap.put(0.3, 500.0);
 
         // Distance (m) -> Hood angle (deg)
-        hoodAngleMap.put(1.5, 25.0);
-        hoodAngleMap.put(2.0, 30.0);
-        hoodAngleMap.put(2.5, 35.0);
-        hoodAngleMap.put(3.0, 40.0);
-        hoodAngleMap.put(3.5, 45.0);
+        hoodAngleMap.put(0.1, 25.0);
+        hoodAngleMap.put(0.2, 30.0);
+        hoodAngleMap.put(0.25, 35.0);
+        hoodAngleMap.put(0.27, 40.0);
+        hoodAngleMap.put(0.3, 45.0);
     }
 
     // ============================================================
@@ -104,6 +104,15 @@ public final class ShooterAimCalculator {
                 rpm,
                 physicsRPM,
                 clamped,
+                true);
+    }
+
+    public static ShooterSolution fallback() {
+        return new ShooterSolution(
+                Degrees.of(35), // safe hood angle
+                500, // safe RPM
+                0.0,
+                0.0,
                 true);
     }
 
